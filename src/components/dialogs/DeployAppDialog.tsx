@@ -1,0 +1,124 @@
+import { useState } from 'react';
+import { useInfrastructure } from '@/context/InfrastructureContext';
+import { AppType, APP_TYPES } from '@/types/infrastructure';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
+
+interface DeployAppDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function DeployAppDialog({ open, onOpenChange }: DeployAppDialogProps) {
+  const [sourceId, setSourceId] = useState('');
+  const [appType, setAppType] = useState<AppType | ''>('');
+  const [vmId, setVmId] = useState('');
+  const { sources, deployApp, getVMsByAppType } = useInfrastructure();
+
+  const compatibleVMs = appType ? getVMsByAppType(appType) : [];
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sourceId || !appType || !vmId) return;
+
+    deployApp(sourceId, appType, vmId);
+    
+    const source = sources.find(s => s.id === sourceId);
+    toast.success('App Deployed', {
+      description: `${appType} app for "${source?.name}" has been deployed successfully.`,
+    });
+
+    setSourceId('');
+    setAppType('');
+    setVmId('');
+    onOpenChange(false);
+  };
+
+  const handleAppTypeChange = (type: AppType) => {
+    setAppType(type);
+    setVmId(''); // Reset VM selection when app type changes
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Deploy App</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="source">Source</Label>
+              <Select value={sourceId} onValueChange={setSourceId}>
+                <SelectTrigger id="source">
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sources.map((source) => (
+                    <SelectItem key={source.id} value={source.id}>
+                      {source.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="app-type">App Type</Label>
+              <Select value={appType} onValueChange={(v) => handleAppTypeChange(v as AppType)}>
+                <SelectTrigger id="app-type">
+                  <SelectValue placeholder="Select app type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {APP_TYPES.map((type) => (
+                    <SelectItem key={type} value={type} className="capitalize">
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="vm">Target VM</Label>
+              <Select value={vmId} onValueChange={setVmId} disabled={!appType}>
+                <SelectTrigger id="vm">
+                  <SelectValue placeholder={appType ? "Select VM" : "Select app type first"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {compatibleVMs.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      No compatible VMs available
+                    </SelectItem>
+                  ) : (
+                    compatibleVMs.map((vm) => (
+                      <SelectItem key={vm.id} value={vm.id} className="font-mono">
+                        {vm.name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {appType && compatibleVMs.length === 0 && (
+                <p className="text-xs text-destructive">
+                  No VMs available for {appType} apps. Add a new VM first.
+                </p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!sourceId || !appType || !vmId}>
+              Deploy
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
