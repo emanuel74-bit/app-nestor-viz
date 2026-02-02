@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Database, HardDrive, Server } from 'lucide-react';
-import { NavLink } from '@/components/NavLink';
+import { CategoryTree } from '@/components/CategoryTree';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -10,10 +10,10 @@ interface MainLayoutProps {
 
 export function MainLayout({ children, currentView, onViewChange }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-gradient-subtle">
+    <div className="min-h-screen bg-gradient-subtle flex flex-col">
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center glow-primary">
               <Server className="w-5 h-5 text-primary" />
@@ -53,10 +53,25 @@ export function MainLayout({ children, currentView, onViewChange }: MainLayoutPr
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-6 py-8">
-        {children}
-      </main>
+      {/* Main Content with Sidebar */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar - Category Tree */}
+        <aside className="w-72 border-r border-border/50 bg-card/30 flex-shrink-0 overflow-hidden flex flex-col">
+          <div className="px-4 py-3 border-b border-border/50">
+            <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+              Hierarchy
+            </h2>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <CategoryTree />
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

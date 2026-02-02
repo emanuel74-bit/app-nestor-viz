@@ -16,8 +16,10 @@ export function DeployAppDialog({ open, onOpenChange }: DeployAppDialogProps) {
   const [sourceId, setSourceId] = useState('');
   const [appType, setAppType] = useState<AppType | ''>('');
   const [vmId, setVmId] = useState('');
-  const { sources, deployApp, getVMsByAppType } = useInfrastructure();
+  const { filteredSources, sources, deployApp, getVMsByAppType } = useInfrastructure();
 
+  // Show filtered sources in dropdown, but allow deploying to any source
+  const displayedSources = filteredSources.length > 0 ? filteredSources : sources;
   const compatibleVMs = appType ? getVMsByAppType(appType) : [];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -57,9 +59,16 @@ export function DeployAppDialog({ open, onOpenChange }: DeployAppDialogProps) {
                   <SelectValue placeholder="Select source" />
                 </SelectTrigger>
                 <SelectContent>
-                  {sources.map((source) => (
+                  {displayedSources.map((source) => (
                     <SelectItem key={source.id} value={source.id}>
-                      {source.name}
+                      <div className="flex flex-col">
+                        <span>{source.name}</span>
+                        {source.categoryPath.length > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {source.categoryPath.join(' / ')}
+                          </span>
+                        )}
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
