@@ -7,11 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CreateSourceDialog } from '@/components/dialogs/CreateSourceDialog';
 import { DeployAppDialog } from '@/components/dialogs/DeployAppDialog';
 import { RedeployAppDialog } from '@/components/dialogs/RedeployAppDialog';
-import { Plus, Server, Trash2, RefreshCw, Database } from 'lucide-react';
+import { Plus, Server, Trash2, RefreshCw, Database, FolderTree } from 'lucide-react';
 import { App } from '@/types/infrastructure';
+import { pathToKey } from '@/lib/hierarchy';
 
 export function SourcesView() {
-  const { sources, getAppsBySource, getVMById, removeApp } = useInfrastructure();
+  const { 
+    filteredSources, 
+    getAppsBySource, 
+    getVMById, 
+    removeApp,
+    hierarchyState,
+  } = useInfrastructure();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deployDialogOpen, setDeployDialogOpen] = useState(false);
   const [redeployApp, setRedeployApp] = useState<App | null>(null);
@@ -22,13 +29,18 @@ export function SourcesView() {
     }
   };
 
+  const scopeDescription = hierarchyState.activeScopePath?.length 
+    ? `Showing sources in: ${hierarchyState.activeScopePath.join(' / ')}`
+    : 'Showing all sources';
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Sources</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Manage data sources and their deployed applications
+            {scopeDescription}
+            {hierarchyState.searchQuery && ` • Searching: "${hierarchyState.searchQuery}"`}
           </p>
         </div>
         <div className="flex gap-2">
@@ -44,7 +56,7 @@ export function SourcesView() {
       </div>
 
       <div className="grid gap-4">
-        {sources.map((source) => {
+        {filteredSources.map((source) => {
           const apps = getAppsBySource(source.id);
           
           return (
@@ -57,13 +69,32 @@ export function SourcesView() {
                     </div>
                     <div>
                       <CardTitle className="text-lg">{source.name}</CardTitle>
-                      <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                        ID: {source.id}
-                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {source.categoryPath.length > 0 && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <FolderTree className="w-3 h-3" />
+                            {source.categoryPath.join(' / ')}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Created {source.createdAt.toLocaleDateString()}
+                  <div className="text-right">
+                    <div className="text-xs text-muted-foreground">
+                      Created {source.createdAt.toLocaleDateString()}
+                    </div>
+                    {Object.keys(source.properties).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1 justify-end">
+                        {Object.entries(source.properties).slice(0, 3).map(([key, value]) => (
+                          <span 
+                            key={key} 
+                            className="text-xs bg-secondary/50 px-1.5 py-0.5 rounded font-mono"
+                          >
+                            {key}: {value}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -122,25 +153,34 @@ export function SourcesView() {
           );
         })}
 
-        {sources.length === 0 && (
+        {filteredSources.length === 0 && (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <Database className="w-12 h-12 text-muted-foreground mb-4" />
               <p className="text-muted-foreground text-center">
-                No sources created yet.
+                {hierarchyState.searchQuery || hierarchyState.activeScopePath 
+                  ? 'No sources match your current filters.'
+                  : 'No sources created yet.'}
                 <br />
-                Create a source to start deploying applications.
+                {!hierarchyState.searchQuery && !hierarchyState.activeScopePath && 
+                  'Create a source to start deploying applications.'}
               </p>
-              <Button className="mt-4" onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create First Source
-              </Button>
+              {!hierarchyState.searchQuery && !hierarchyState.activeScopePath && (
+                <Button className="mt-4" onClick={() => setCreateDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create First Source
+                </Button>
+              )}
             </CardContent>
           </Card>
         )}
       </div>
 
-      <CreateSourceDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
+      <CreateSourceDialog 
+        open={createDialogOpen} 
+        onOpenChange={setCreateDialogOpen}
+        defaultCategoryPath={hierarchyState.activeScopePath || []}
+      />
       <DeployAppDialog open={deployDialogOpen} onOpenChange={setDeployDialogOpen} />
       {redeployApp && (
         <RedeployAppDialog

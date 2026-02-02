@@ -1,15 +1,25 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useInfrastructure } from '@/context/InfrastructureContext';
 import { AppTypeBadge } from '@/components/AppTypeBadge';
 import { StatusIndicator } from '@/components/StatusIndicator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AddVMDialog } from '@/components/dialogs/AddVMDialog';
-import { Plus, HardDrive, Box } from 'lucide-react';
+import { Plus, HardDrive, Box, FolderTree } from 'lucide-react';
 
 export function VMsView() {
-  const { vms, getAppsByVM, getSourceById } = useInfrastructure();
+  const { vms, apps, getAppsByVM, getSourceById, filteredSources, hierarchyState } = useInfrastructure();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  // Filter VMs to only show those with apps from filtered sources (when scope is active)
+  const filteredSourceIds = useMemo(() => 
+    new Set(filteredSources.map(s => s.id)), 
+    [filteredSources]
+  );
+
+  const scopeDescription = hierarchyState.activeScopePath?.length 
+    ? `Showing VMs with apps from: ${hierarchyState.activeScopePath.join(' / ')}`
+    : 'Showing all virtual machines';
 
   return (
     <div className="space-y-6">
@@ -17,7 +27,8 @@ export function VMsView() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Virtual Machines</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Manage VMs and view deployed applications
+            {scopeDescription}
+            {hierarchyState.searchQuery && ` • Searching: "${hierarchyState.searchQuery}"`}
           </p>
         </div>
         <Button onClick={() => setAddDialogOpen(true)}>
@@ -28,10 +39,24 @@ export function VMsView() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {vms.map((vm) => {
-          const apps = getAppsByVM(vm.id);
+          const allVmApps = getAppsByVM(vm.id);
+          
+          // Filter apps based on source scope
+          const scopedApps = hierarchyState.activeScopePath || hierarchyState.searchQuery
+            ? allVmApps.filter(app => filteredSourceIds.has(app.sourceId))
+            : allVmApps;
+          
+          // If scope is active and no matching apps, dim this VM
+          const hasMatchingApps = scopedApps.length > 0;
+          const isScoped = hierarchyState.activeScopePath || hierarchyState.searchQuery;
           
           return (
-            <Card key={vm.id} className="bg-gradient-card border-border/50 animate-fade-in">
+            <Card 
+              key={vm.id} 
+              className={`bg-gradient-card border-border/50 animate-fade-in transition-opacity ${
+                isScoped && !hasMatchingApps ? 'opacity-40' : ''
+              }`}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -57,26 +82,36 @@ export function VMsView() {
                 
                 <div>
                   <div className="text-xs text-muted-foreground mb-2 uppercase tracking-wider font-medium">
-                    Running Apps ({apps.length})
+                    {isScoped ? `Matching Apps (${scopedApps.length}/${allVmApps.length})` : `Running Apps (${allVmApps.length})`}
                   </div>
                   <div className="space-y-2">
-                    {apps.length === 0 ? (
+                    {(isScoped ? scopedApps : allVmApps).length === 0 ? (
                       <p className="text-xs text-muted-foreground py-2 text-center bg-secondary/30 rounded-md">
-                        No apps deployed
+                        {isScoped ? 'No matching apps' : 'No apps deployed'}
                       </p>
                     ) : (
-                      apps.map((app) => {
+                      (isScoped ? scopedApps : allVmApps).map((app) => {
                         const source = getSourceById(app.sourceId);
                         return (
                           <div
                             key={app.id}
                             className="flex items-center justify-between p-2 rounded-md bg-secondary/30 border border-border/50"
                           >
-                            <div className="flex items-center gap-2">
-                              <Box className="w-3.5 h-3.5 text-muted-foreground" />
-                              <span className="text-sm font-medium">
-                                {source?.name || 'Unknown'}
-                              </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <Box className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                <span className="text-sm font-medium truncate">
+                                  {source?.name || 'Unknown'}
+                                </span>
+                              </div>
+                              {source?.categoryPath && source.categoryPath.length > 0 && (
+                                <div className="flex items-center gap-1 ml-5.5 mt-0.5">
+                                  <FolderTree className="w-3 h-3 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground truncate">
+                                    {source.categoryPath.join(' / ')}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                             <StatusIndicator status={app.status} showLabel={false} />
                           </div>
