@@ -24,13 +24,17 @@ export function DeployAppDialog({ open, onOpenChange }: DeployAppDialogProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!sourceId || !appType || !vmId) return;
+    if (!sourceId || !appType) return;
 
-    deployApp(sourceId, appType, vmId);
+    deployApp(sourceId, appType, vmId || null);
     
     const source = sources.find(s => s.id === sourceId);
+    const deploymentMessage = vmId 
+      ? `${appType} app for "${source?.name}" has been deployed to selected VM.`
+      : `${appType} app for "${source?.name}" has been queued for automatic placement.`;
+    
     toast.success('App Deployed', {
-      description: `${appType} app for "${source?.name}" has been deployed successfully.`,
+      description: deploymentMessage,
     });
 
     setSourceId('');
@@ -92,28 +96,30 @@ export function DeployAppDialog({ open, onOpenChange }: DeployAppDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="vm">Target VM</Label>
+              <Label htmlFor="vm">Target VM <span className="text-muted-foreground font-normal">(optional)</span></Label>
               <Select value={vmId} onValueChange={setVmId} disabled={!appType}>
                 <SelectTrigger id="vm">
-                  <SelectValue placeholder={appType ? "Select VM" : "Select app type first"} />
+                  <SelectValue placeholder={appType ? "Auto-assign (or select VM)" : "Select app type first"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {compatibleVMs.length === 0 ? (
-                    <SelectItem value="none" disabled>
-                      No compatible VMs available
+                  <SelectItem value="auto" className="text-muted-foreground">
+                    Auto-assign to available VM
+                  </SelectItem>
+                  {compatibleVMs.map((vm) => (
+                    <SelectItem key={vm.id} value={vm.id} className="font-mono">
+                      {vm.name}
                     </SelectItem>
-                  ) : (
-                    compatibleVMs.map((vm) => (
-                      <SelectItem key={vm.id} value={vm.id} className="font-mono">
-                        {vm.name}
-                      </SelectItem>
-                    ))
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
               {appType && compatibleVMs.length === 0 && (
-                <p className="text-xs text-destructive">
-                  No VMs available for {appType} apps. Add a new VM first.
+                <p className="text-xs text-muted-foreground">
+                  No VMs available for {appType} apps. App will be queued for placement.
+                </p>
+              )}
+              {vmId === '' && appType && (
+                <p className="text-xs text-muted-foreground">
+                  Leave empty to queue for automatic VM assignment.
                 </p>
               )}
             </div>
@@ -122,8 +128,8 @@ export function DeployAppDialog({ open, onOpenChange }: DeployAppDialogProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!sourceId || !appType || !vmId}>
-              Deploy
+            <Button type="submit" disabled={!sourceId || !appType}>
+              {vmId && vmId !== 'auto' ? 'Deploy' : 'Queue for Deployment'}
             </Button>
           </DialogFooter>
         </form>

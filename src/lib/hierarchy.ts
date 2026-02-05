@@ -74,7 +74,7 @@ export function isSourceInScope(source: Source, scopePath: string[] | null): boo
 }
 
 /**
- * Check if a source matches the search query
+ * Check if a source matches the search query (name only)
  */
 export function sourceMatchesSearch(source: Source, query: string): boolean {
   if (!query.trim()) {
@@ -83,24 +83,8 @@ export function sourceMatchesSearch(source: Source, query: string): boolean {
 
   const lowerQuery = query.toLowerCase().trim();
 
-  // Match source name
-  if (source.name.toLowerCase().includes(lowerQuery)) {
-    return true;
-  }
-
-  // Match category path segments
-  if (source.categoryPath.some(segment => segment.toLowerCase().includes(lowerQuery))) {
-    return true;
-  }
-
-  // Match property keys and values
-  for (const [key, value] of Object.entries(source.properties)) {
-    if (key.toLowerCase().includes(lowerQuery) || value.toLowerCase().includes(lowerQuery)) {
-      return true;
-    }
-  }
-
-  return false;
+  // Match source name only
+  return source.name.toLowerCase().includes(lowerQuery);
 }
 
 /**

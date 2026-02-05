@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { Source, App, VirtualMachine, AppType, APP_TYPES, CategoryNode, SourceProperties } from '@/types/infrastructure';
+import { PropertyFilter, sourceMatchesPropertyFilters } from '@/types/filters';
 import { buildCategoryTree, filterSources, pathToKey } from '@/lib/hierarchy';
 
 interface InfrastructureState {
@@ -18,7 +19,7 @@ interface InfrastructureContextType extends InfrastructureState {
   // CRUD operations
   createSource: (name: string, categoryPath: string[], properties?: SourceProperties) => { source: Source; apps: App[]; newVms: VirtualMachine[] };
   addVM: (name: string, appType: AppType) => VirtualMachine;
-  deployApp: (sourceId: string, appType: AppType, vmId: string) => App;
+  deployApp: (sourceId: string, appType: AppType, vmId: string | null) => App;
   removeApp: (appId: string) => void;
   redeployApp: (appId: string, newVmId: string) => void;
   
@@ -39,6 +40,10 @@ interface InfrastructureContextType extends InfrastructureState {
   expandAll: () => void;
   collapseAll: () => void;
   isPathExpanded: (path: string[]) => boolean;
+  
+  // Property filters
+  propertyFilters: PropertyFilter[];
+  setPropertyFilters: (filters: PropertyFilter[]) => void;
 }
 
 const InfrastructureContext = createContext<InfrastructureContextType | null>(null);
@@ -127,21 +132,31 @@ export function InfrastructureProvider({ children }: { children: React.ReactNode
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(() => collectAllPaths(initialSources));
   const [activeScopePath, setActiveScopePath] = useState<string[] | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [propertyFilters, setPropertyFilters] = useState<PropertyFilter[]>([]);
 
   // Memoized category tree
   const categoryTree = useMemo(() => buildCategoryTree(sources), [sources]);
 
-  // Memoized filtered sources
-  const filteredSources = useMemo(
-    () => filterSources(sources, activeScopePath, searchQuery),
-    [sources, activeScopePath, searchQuery]
-  );
+  // Memoized filtered sources (hierarchy scope + name search + property filters)
+  const filteredSources = useMemo(() => {
+    const scopeAndSearchFiltered = filterSources(sources, activeScopePath, searchQuery);
+    
+    // Apply property filters
+    if (propertyFilters.length === 0) {
+      return scopeAndSearchFiltered;
+    }
+    
+    return scopeAndSearchFiltered.filter(source =>
+      sourceMatchesPropertyFilters(source.properties, propertyFilters)
+    );
+  }, [sources, activeScopePath, searchQuery, propertyFilters]);
 
   const hierarchyState: HierarchyState = useMemo(() => ({
     expandedPaths,
     activeScopePath,
     searchQuery,
-  }), [expandedPaths, activeScopePath, searchQuery]);
+    propertyFilters,
+  }), [expandedPaths, activeScopePath, searchQuery, propertyFilters]);
 
   const isPathExpanded = useCallback((path: string[]) => {
     return expandedPaths.has(pathToKey(path));
@@ -254,13 +269,13 @@ export function InfrastructureProvider({ children }: { children: React.ReactNode
     return vm;
   }, []);
 
-  const deployApp = useCallback((sourceId: string, appType: AppType, vmId: string) => {
+  const deployApp = useCallback((sourceId: string, appType: AppType, vmId: string | null) => {
     const app: App = {
       id: generateId(),
       sourceId,
       type: appType,
       vmId,
-      status: 'running',
+      status: vmId ? 'running' : 'pending',
     };
     setApps(prev => [...prev, app]);
     return app;
@@ -304,6 +319,9 @@ export function InfrastructureProvider({ children }: { children: React.ReactNode
         expandAll,
         collapseAll,
         isPathExpanded,
+        // Property filters
+        propertyFilters,
+        setPropertyFilters,
       }}
     >
       {children}

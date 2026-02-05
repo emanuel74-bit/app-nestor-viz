@@ -4,6 +4,7 @@ import { pathToKey, sourceMatchesSearch, getSourceCount, hasMatchingDescendant }
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Database, Search, X, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { PropertyFilterPanel } from '@/components/PropertyFilterPanel';
 import { cn } from '@/lib/utils';
 
 interface CategoryTreeProps {
@@ -167,20 +168,23 @@ export function CategoryTree({ onSourceSelect }: CategoryTreeProps) {
     setActiveScopePath,
     expandAll,
     collapseAll,
+    propertyFilters,
   } = useInfrastructure();
 
   const sortedRootChildren = Array.from(categoryTree.children.values()).sort((a, b) => 
     a.name.localeCompare(b.name)
   );
+  
+  const hasActiveFilters = propertyFilters.length > 0;
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search */}
+      {/* Search - Name only */}
       <div className="p-3 border-b border-border/50">
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search sources..."
+            placeholder="Search by name..."
             value={hierarchyState.searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-8 pr-8 h-9"
@@ -194,6 +198,11 @@ export function CategoryTree({ onSourceSelect }: CategoryTreeProps) {
             </button>
           )}
         </div>
+      </div>
+      
+      {/* Property Filter Panel */}
+      <div className="border-b border-border/50">
+        <PropertyFilterPanel />
       </div>
 
       {/* Toolbar */}
@@ -218,7 +227,7 @@ export function CategoryTree({ onSourceSelect }: CategoryTreeProps) {
             Collapse
           </Button>
         </div>
-        {hierarchyState.activeScopePath && (
+        {(hierarchyState.activeScopePath || hasActiveFilters) && (
           <Button
             variant="ghost"
             size="sm"
