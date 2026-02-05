@@ -42,4 +42,5 @@ export interface HierarchyState {
   expandedPaths: Set<string>;
   activeScopePath: string[] | null;
   searchQuery: string;
+  propertyFilters: import('@/types/filters').PropertyFilter[];
 }
