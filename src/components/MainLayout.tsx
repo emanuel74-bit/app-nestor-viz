@@ -1,6 +1,9 @@
-import { ReactNode } from 'react';
-import { Database, HardDrive, Server } from 'lucide-react';
+import { ReactNode, useState } from 'react';
+import { Database, HardDrive, Server, SlidersHorizontal, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { CategoryTree } from '@/components/CategoryTree';
+import { PropertyFilterPanel } from '@/components/PropertyFilterPanel';
+import { Button } from '@/components/ui/button';
+import { useInfrastructure } from '@/context/InfrastructureContext';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -9,6 +12,10 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, currentView, onViewChange }: MainLayoutProps) {
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const { filterGroups } = useInfrastructure();
+  const activeFilterCount = filterGroups.filter(g => g.conditions.some(c => c.value.trim())).length;
+
   return (
     <div className="min-h-screen bg-gradient-subtle flex flex-col">
       {/* Header */}
@@ -49,13 +56,28 @@ export function MainLayout({ children, currentView, onViewChange }: MainLayoutPr
             </button>
           </nav>
 
-          <div className="w-[200px]" /> {/* Spacer for balance */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant={filterPanelOpen ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilterPanelOpen(!filterPanelOpen)}
+              className="relative"
+            >
+              <SlidersHorizontal className="w-4 h-4 mr-2" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="ml-1.5 bg-primary-foreground text-primary text-xs w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Main Content with Sidebar */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - Category Tree */}
+        {/* Left Sidebar - Category Tree */}
         <aside className="w-72 border-r border-border/50 bg-card/30 flex-shrink-0 overflow-hidden flex flex-col">
           <div className="px-4 py-3 border-b border-border/50">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
@@ -71,6 +93,28 @@ export function MainLayout({ children, currentView, onViewChange }: MainLayoutPr
         <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
+
+        {/* Right Panel - Filter Panel */}
+        {filterPanelOpen && (
+          <aside className="w-80 border-l border-border/50 bg-card/30 flex-shrink-0 overflow-hidden flex flex-col animate-fade-in">
+            <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+                Property Filters
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFilterPanelOpen(false)}
+                className="h-7 w-7 p-0"
+              >
+                <PanelRightClose className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <PropertyFilterPanel />
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   );
