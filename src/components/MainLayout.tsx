@@ -76,25 +76,25 @@ export function MainLayout({ children, currentView, onViewChange }: MainLayoutPr
       </header>
 
       {/* Main Content with Sidebar */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar - Category Tree */}
-        <aside className="w-72 border-r border-border/50 bg-card/30 flex-shrink-0 overflow-hidden flex flex-col">
+      <div className="flex flex-1 h-[calc(100vh-4rem)] overflow-hidden">
+        {/* Left Sidebar - Category Tree (sticky) */}
+        <aside className="w-72 border-r border-border/50 bg-card/30 flex-shrink-0 overflow-y-auto flex flex-col">
           <div className="px-4 py-3 border-b border-border/50">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
               Hierarchy
             </h2>
           </div>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 overflow-y-auto">
             <CategoryTree />
           </div>
         </aside>
 
-        {/* Main Content */}
+        {/* Main Content - scrolls independently */}
         <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
 
-        {/* Right Panel - Filter Panel */}
+        {/* Right Panel - Filter Panel (sticky) */}
         {filterPanelOpen && (
           <aside className="w-80 border-l border-border/50 bg-card/30 flex-shrink-0 overflow-hidden flex flex-col animate-fade-in">
             <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
