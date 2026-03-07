@@ -17,6 +17,7 @@ interface InfrastructureContextType {
   // Source CRUD
   createSource: (input: CreateSourceInput) => { source: Source; apps: App[]; newVms: VirtualMachine[] };
   createSources: (inputs: CreateSourceInput[]) => { sources: Source[]; apps: App[]; newVms: VirtualMachine[] };
+  updateSource: (id: string, updates: Partial<CreateSourceInput>) => void;
 
   // VM
   addVM: (name: string, appType: AppType) => VirtualMachine;
@@ -247,6 +248,24 @@ export function InfrastructureProvider({ children }: { children: React.ReactNode
     return { sources: allNewSources, apps: allNewApps, newVms: allNewVms };
   }, [vms, buildSourceApps]);
 
+  const updateSource = useCallback((id: string, updates: Partial<CreateSourceInput>) => {
+    setSources(prev => prev.map(s => {
+      if (s.id !== id) return s;
+      const updated = { ...s, ...updates };
+      // Update expanded paths if categoryPath changed
+      if (updates.categoryPath) {
+        setExpandedPaths(prev => {
+          const next = new Set(prev);
+          for (let i = 1; i <= updates.categoryPath!.length; i++) {
+            next.add(pathToKey(updates.categoryPath!.slice(0, i)));
+          }
+          return next;
+        });
+      }
+      return updated;
+    }));
+  }, []);
+
   const addVM = useCallback((name: string, appType: AppType) => {
     const vm: VirtualMachine = { id: generateId(), name, appType, status: 'online', createdAt: new Date() };
     setVMs(prev => [...prev, vm]);
@@ -302,7 +321,7 @@ export function InfrastructureProvider({ children }: { children: React.ReactNode
     <InfrastructureContext.Provider
       value={{
         sources, apps, vms,
-        createSource, createSources, addVM,
+        createSource, createSources, updateSource, addVM,
         deployApp, removeApp, redeployApp, bulkDeployApp,
         redeployAllAppsOnVM, moveAllAppsToVM,
         getAppsBySource, getAppsByVM, getVMsByAppType, getSourceById, getVMById,
