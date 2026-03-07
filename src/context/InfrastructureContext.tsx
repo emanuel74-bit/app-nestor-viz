@@ -17,6 +17,7 @@ interface InfrastructureContextType {
   // Source CRUD
   createSource: (input: CreateSourceInput) => { source: Source; apps: App[]; newVms: VirtualMachine[] };
   createSources: (inputs: CreateSourceInput[]) => { sources: Source[]; apps: App[]; newVms: VirtualMachine[] };
+  updateSource: (id: string, updates: Partial<CreateSourceInput>) => void;
 
   // VM
   addVM: (name: string, appType: AppType) => VirtualMachine;
